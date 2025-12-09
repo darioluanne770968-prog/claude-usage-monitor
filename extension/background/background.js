@@ -87,6 +87,15 @@ async function handleUsageDataUpdate(data) {
   checkAndNotify(data);
 }
 
+// 根据时间戳计算剩余时间（分钟）
+function calculateRemainingMinutesFromTimestamp(resetTimestamp) {
+  if (!resetTimestamp) return 999;
+  const now = Date.now();
+  const diff = resetTimestamp - now;
+  if (diff <= 0) return 0;
+  return Math.floor(diff / 60000);
+}
+
 // 检查是否需要发送通知
 async function checkAndNotify(data) {
   const config = await getConfig();
@@ -106,9 +115,11 @@ async function checkAndNotify(data) {
     return;
   }
 
-  // 检查5小时限制
-  const fiveHourReset = data.fiveHourLimit?.resetMinutes || 999;
-  const weeklyReset = data.weeklyLimits?.resetMinutes || 999;
+  // 使用时间戳实时计算剩余时间
+  const fiveHourReset = calculateRemainingMinutesFromTimestamp(data.fiveHourLimit?.resetTimestamp);
+  const weeklyReset = calculateRemainingMinutesFromTimestamp(data.weeklyLimits?.resetTimestamp);
+
+  console.log('检查通知条件:', { fiveHourReset, weeklyReset, threshold: config.notifyThreshold });
 
   const shouldNotify =
     (fiveHourReset > 0 && fiveHourReset <= config.notifyThreshold) ||
@@ -141,13 +152,17 @@ function buildNotificationMessage(data) {
   lines.push('⏰ Claude 使用最佳时机！');
   lines.push('');
 
+  // 使用时间戳实时计算剩余时间
+  const fiveHourResetMin = calculateRemainingMinutesFromTimestamp(data.fiveHourLimit?.resetTimestamp);
+  const weeklyResetMin = calculateRemainingMinutesFromTimestamp(data.weeklyLimits?.resetTimestamp);
+
   // 即将重置的提醒
   const resetAlerts = [];
-  if (data.fiveHourLimit?.resetMinutes <= 60 && data.fiveHourLimit?.resetMinutes > 0) {
-    resetAlerts.push(`• 5小时限制将在 ${formatTime(data.fiveHourLimit.resetMinutes)} 后重置`);
+  if (fiveHourResetMin <= 60 && fiveHourResetMin > 0) {
+    resetAlerts.push(`• 5小时限制将在 ${formatTime(fiveHourResetMin)} 后重置`);
   }
-  if (data.weeklyLimits?.resetMinutes <= 60 && data.weeklyLimits?.resetMinutes > 0) {
-    resetAlerts.push(`• 每周限制将在 ${formatTime(data.weeklyLimits.resetMinutes)} 后重置`);
+  if (weeklyResetMin <= 60 && weeklyResetMin > 0) {
+    resetAlerts.push(`• 每周限制将在 ${formatTime(weeklyResetMin)} 后重置`);
   }
 
   if (resetAlerts.length > 0) {
@@ -165,8 +180,8 @@ function buildNotificationMessage(data) {
 
   // 重置时间
   lines.push('⏱️ 完整重置时间：');
-  lines.push(`• 每周限制：${formatTime(data.weeklyLimits?.resetMinutes || 0)}`);
-  lines.push(`• 5小时限制：${formatTime(data.fiveHourLimit?.resetMinutes || 0)}`);
+  lines.push(`• 每周限制：${formatTime(weeklyResetMin)}`);
+  lines.push(`• 5小时限制：${formatTime(fiveHourResetMin)}`);
   lines.push('');
 
   lines.push('✨ 现在使用，很快就能再次使用！');

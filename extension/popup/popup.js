@@ -53,9 +53,29 @@ function loadUsageData() {
   });
 }
 
+// 全局变量：存储当前数据
+let currentPopupData = null;
+let popupCountdownTimer = null;
+
 // 显示用量数据
 function displayUsageData(data) {
   console.log('显示用量数据:', data);
+
+  // 保存数据到全局变量
+  currentPopupData = data;
+
+  // 更新显示
+  updatePopupDisplay();
+
+  // 启动定时器，每分钟更新一次倒计时
+  startPopupCountdownTimer();
+}
+
+// 更新 Popup 显示
+function updatePopupDisplay() {
+  if (!currentPopupData) return;
+
+  const data = currentPopupData;
 
   // 当前会话
   const currentPercent = data.currentSession?.percentage || 0;
@@ -63,17 +83,17 @@ function displayUsageData(data) {
   elements.currentSessionBar.style.width = `${currentPercent}%`;
   updateBarColor(elements.currentSessionBar, currentPercent);
 
-  // 每周限制
+  // 每周限制 - 使用时间戳实时计算
   const weeklyPercent = data.weeklyLimits?.percentage || 0;
-  const weeklyResetMin = data.weeklyLimits?.resetMinutes || 0;
+  const weeklyResetMin = calculateRemainingMinutes(data.weeklyLimits?.resetTimestamp);
   elements.weeklyLimits.textContent = `${weeklyPercent}%`;
   elements.weeklyLimitsBar.style.width = `${weeklyPercent}%`;
   elements.weeklyReset.textContent = `重置时间：${formatTime(weeklyResetMin)}`;
   updateBarColor(elements.weeklyLimitsBar, weeklyPercent);
 
-  // 5小时限制
+  // 5小时限制 - 使用时间戳实时计算
   const fiveHourPercent = data.fiveHourLimit?.percentage || 0;
-  const fiveHourResetMin = data.fiveHourLimit?.resetMinutes || 0;
+  const fiveHourResetMin = calculateRemainingMinutes(data.fiveHourLimit?.resetTimestamp);
   elements.fiveHourLimit.textContent = `${fiveHourPercent}%`;
   elements.fiveHourLimitBar.style.width = `${fiveHourPercent}%`;
   elements.fiveHourReset.textContent = `重置时间：${formatTime(fiveHourResetMin)}`;
@@ -81,6 +101,16 @@ function displayUsageData(data) {
 
   // 检查是否显示提醒
   checkAndShowAlert(data);
+}
+
+// 定时器：每分钟更新一次显示
+function startPopupCountdownTimer() {
+  if (popupCountdownTimer) {
+    clearInterval(popupCountdownTimer);
+  }
+  popupCountdownTimer = setInterval(() => {
+    updatePopupDisplay();
+  }, 60000); // 每60秒更新一次
 }
 
 // 更新进度条颜色
@@ -99,12 +129,16 @@ function updateBarColor(barElement, percentage) {
 function checkAndShowAlert(data) {
   const alerts = [];
 
-  if (data.weeklyLimits?.resetMinutes <= 60 && data.weeklyLimits?.resetMinutes > 0) {
-    alerts.push(`每周限制将在 ${formatTime(data.weeklyLimits.resetMinutes)} 后重置`);
+  // 使用时间戳实时计算剩余时间
+  const weeklyResetMin = calculateRemainingMinutes(data.weeklyLimits?.resetTimestamp);
+  const fiveHourResetMin = calculateRemainingMinutes(data.fiveHourLimit?.resetTimestamp);
+
+  if (weeklyResetMin <= 60 && weeklyResetMin > 0) {
+    alerts.push(`每周限制将在 ${formatTime(weeklyResetMin)} 后重置`);
   }
 
-  if (data.fiveHourLimit?.resetMinutes <= 60 && data.fiveHourLimit?.resetMinutes > 0) {
-    alerts.push(`5小时限制将在 ${formatTime(data.fiveHourLimit.resetMinutes)} 后重置`);
+  if (fiveHourResetMin <= 60 && fiveHourResetMin > 0) {
+    alerts.push(`5小时限制将在 ${formatTime(fiveHourResetMin)} 后重置`);
   }
 
   if (alerts.length > 0) {
@@ -115,10 +149,22 @@ function checkAndShowAlert(data) {
   }
 }
 
+// 根据时间戳计算剩余时间（分钟）
+function calculateRemainingMinutes(resetTimestamp) {
+  if (!resetTimestamp) return 0;
+  const now = Date.now();
+  const diff = resetTimestamp - now;
+  if (diff <= 0) return 0;
+  return Math.floor(diff / 60000);
+}
+
 // 格式化时间
 function formatTime(minutes) {
-  if (minutes === 0) {
+  if (minutes === 0 || minutes === null) {
     return '即将重置';
+  }
+  if (minutes < 0) {
+    return '已重置';
   }
   if (minutes < 60) {
     return `${minutes} 分钟`;

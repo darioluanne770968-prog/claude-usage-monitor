@@ -60,6 +60,61 @@ function parseResetTime(text) {
   return totalMinutes;
 }
 
+// 计算绝对重置时间戳（根据分钟数）
+function calculateResetTimestamp(minutesFromNow) {
+  const now = Date.now();
+  return now + (minutesFromNow * 60 * 1000);
+}
+
+// 解析固定时间（如 "Resets Tue 12:59 PM"）转为下一个该时间的时间戳
+function parseFixedResetTime(timeStr) {
+  if (!timeStr) return null;
+
+  try {
+    // 匹配类似 "Tue 12:59 PM" 或 "Resets Tue 12:59 PM" 的格式
+    const match = timeStr.match(/(\w+)\s+(\d+):(\d+)\s+(AM|PM)/i);
+    if (!match) return null;
+
+    const [, dayName, hour, minute, ampm] = match;
+
+    // 转换星期名称
+    const daysMap = {
+      'sun': 0, 'mon': 1, 'tue': 2, 'wed': 3,
+      'thu': 4, 'fri': 5, 'sat': 6
+    };
+    const targetDay = daysMap[dayName.toLowerCase().substring(0, 3)];
+    if (targetDay === undefined) return null;
+
+    // 转换为24小时制
+    let hour24 = parseInt(hour);
+    if (ampm.toUpperCase() === 'PM' && hour24 !== 12) {
+      hour24 += 12;
+    } else if (ampm.toUpperCase() === 'AM' && hour24 === 12) {
+      hour24 = 0;
+    }
+
+    // 计算下一个目标时间
+    const now = new Date();
+    const targetDate = new Date(now);
+    targetDate.setHours(hour24, parseInt(minute), 0, 0);
+
+    // 如果今天是目标星期几
+    const currentDay = now.getDay();
+    let daysUntilTarget = targetDay - currentDay;
+
+    // 如果已经过了这个时间，则计算到下周
+    if (daysUntilTarget < 0 || (daysUntilTarget === 0 && now > targetDate)) {
+      daysUntilTarget += 7;
+    }
+
+    targetDate.setDate(targetDate.getDate() + daysUntilTarget);
+    return targetDate.getTime();
+  } catch (error) {
+    console.error('解析固定重置时间失败:', error);
+    return null;
+  }
+}
+
 // 读取用量数据
 async function readUsageData() {
   try {
@@ -68,21 +123,26 @@ async function readUsageData() {
     // 等待页面基本内容加载（等待包含 "Plan usage limits" 的文本）
     await new Promise(resolve => setTimeout(resolve, 2000));
 
+    const now = Date.now();
     const usageData = {
-      timestamp: Date.now(),
+      timestamp: now,
+      lastSync: now,  // 添加上次同步时间
       currentSession: {
         percentage: 0,
         resetMinutes: 0,
+        resetTimestamp: null,  // 绝对重置时间戳
         label: 'Current session'
       },
       weeklyLimits: {
         percentage: 0,
         resetMinutes: 0,
+        resetTimestamp: null,  // 绝对重置时间戳
         label: 'Weekly limits'
       },
       fiveHourLimit: {
         percentage: 0,
         resetMinutes: 0,
+        resetTimestamp: null,  // 绝对重置时间戳
         label: '5-hour rolling window'
       }
     };
@@ -101,8 +161,10 @@ async function readUsageData() {
     // 提取 Current session 的重置时间
     let currentResetMatch = allText.match(/Current session[\s\S]*?Resets in\s+([^\n]+)/i);
     if (currentResetMatch) {
-      usageData.currentSession.resetMinutes = parseResetTime(currentResetMatch[1]);
-      console.log('Current session 重置时间:', currentResetMatch[1]);
+      const minutes = parseResetTime(currentResetMatch[1]);
+      usageData.currentSession.resetMinutes = minutes;
+      usageData.currentSession.resetTimestamp = calculateResetTimestamp(minutes);
+      console.log('Current session 重置时间:', currentResetMatch[1], '→', minutes, '分钟');
     }
 
     // 方法2: 尝试匹配 Weekly limits (All models)
@@ -112,11 +174,26 @@ async function readUsageData() {
       console.log('找到 Weekly limits 百分比:', weeklyMatch[1]);
     }
 
-    // 提取 Weekly limits 的重置时间
-    let weeklyResetMatch = allText.match(/All models[\s\S]*?Resets in\s+([^\n]+)/i);
+    // 提取 Weekly limits 的重置时间（可能是倒计时或固定时间）
+    let weeklyResetMatch = allText.match(/All models[\s\S]*?Resets\s+([^\n]+)/i);
     if (weeklyResetMatch) {
-      usageData.weeklyLimits.resetMinutes = parseResetTime(weeklyResetMatch[1]);
-      console.log('Weekly limits 重置时间:', weeklyResetMatch[1]);
+      const resetText = weeklyResetMatch[1];
+      // 检查是否是固定时间格式（如 "Tue 12:59 PM"）
+      if (resetText.match(/\w+\s+\d+:\d+\s+(AM|PM)/i)) {
+        const timestamp = parseFixedResetTime(resetText);
+        if (timestamp) {
+          usageData.weeklyLimits.resetTimestamp = timestamp;
+          // 计算距离现在还有多少分钟
+          usageData.weeklyLimits.resetMinutes = Math.floor((timestamp - now) / 60000);
+          console.log('Weekly limits 固定重置时间:', resetText, '→', new Date(timestamp).toLocaleString());
+        }
+      } else {
+        // 倒计时格式（如 "in 2 hr 30 min"）
+        const minutes = parseResetTime(resetText);
+        usageData.weeklyLimits.resetMinutes = minutes;
+        usageData.weeklyLimits.resetTimestamp = calculateResetTimestamp(minutes);
+        console.log('Weekly limits 重置倒计时:', resetText, '→', minutes, '分钟');
+      }
     }
 
     // 方法3: 尝试查找5小时限制
@@ -125,7 +202,10 @@ async function readUsageData() {
       usageData.fiveHourLimit.percentage = parseInt(fiveHourMatch[1]);
       const fiveHourResetMatch = allText.match(/5[\s-]hour[\s\S]*?Resets in\s+([^\n]+)/i);
       if (fiveHourResetMatch) {
-        usageData.fiveHourLimit.resetMinutes = parseResetTime(fiveHourResetMatch[1]);
+        const minutes = parseResetTime(fiveHourResetMatch[1]);
+        usageData.fiveHourLimit.resetMinutes = minutes;
+        usageData.fiveHourLimit.resetTimestamp = calculateResetTimestamp(minutes);
+        console.log('5-hour limit 重置时间:', fiveHourResetMatch[1], '→', minutes, '分钟');
       }
       console.log('找到 5-hour limit:', fiveHourMatch[1]);
     } else {
@@ -133,6 +213,7 @@ async function readUsageData() {
       usageData.fiveHourLimit = {
         percentage: usageData.currentSession.percentage,
         resetMinutes: usageData.currentSession.resetMinutes || 300,
+        resetTimestamp: usageData.currentSession.resetTimestamp || calculateResetTimestamp(300),
         label: '5-hour rolling window'
       };
       console.log('未找到5小时限制，使用 Current session 数据');
