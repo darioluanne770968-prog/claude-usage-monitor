@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude 用量监控</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- 头部 -->
+    <div class="header">
+      <h1>Claude 用量监控</h1>
+      <button id="refreshBtn" class="icon-btn" title="刷新数据">🔄</button>
+    </div>
+
+    <!-- 用量显示 -->
+    <div class="usage-section">
+      <div class="usage-card">
+        <div class="usage-label">当前会话</div>
+        <div class="usage-value" id="currentSession">--%</div>
+        <div class="usage-bar">
+          <div class="usage-bar-fill" id="currentSessionBar"></div>
+        </div>
+      </div>
+
+      <div class="usage-card">
+        <div class="usage-label">每周限制</div>
+        <div class="usage-value" id="weeklyLimits">--%</div>
+        <div class="usage-bar">
+          <div class="usage-bar-fill" id="weeklyLimitsBar"></div>
+        </div>
+        <div class="reset-time" id="weeklyReset">重置时间：--</div>
+      </div>
+
+      <div class="usage-card">
+        <div class="usage-label">5小时限制</div>
+        <div class="usage-value" id="fiveHourLimit">--%</div>
+        <div class="usage-bar">
+          <div class="usage-bar-fill" id="fiveHourLimitBar"></div>
+        </div>
+        <div class="reset-time" id="fiveHourReset">重置时间：--</div>
+      </div>
+    </div>
+
+    <!-- 提醒状态 -->
+    <div class="alert-section" id="alertSection" style="display: none;">
+      <div class="alert-box">
+        <span class="alert-icon">⏰</span>
+        <span class="alert-text" id="alertText"></span>
+      </div>
+    </div>
+
+    <!-- 快捷操作 -->
+    <div class="actions">
+      <button id="openUsageBtn" class="btn btn-primary">打开 Usage 页面</button>
+      <button id="testNotifyBtn" class="btn btn-secondary">测试通知</button>
+    </div>
+
+    <!-- 设置面板 -->
+    <div class="settings">
+      <div class="settings-header" id="settingsToggle">
+        <span>⚙️ 设置</span>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="settings-content" id="settingsContent">
+        <div class="form-group">
+          <label for="serverChanKey">Server酱 SendKey</label>
+          <input type="text" id="serverChanKey" placeholder="输入 Server酱 SendKey">
+          <div class="help-text">
+            <a href="https://sct.ftqq.com/" target="_blank">点击获取 SendKey</a>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="notifyThreshold">提醒阈值（分钟）</label>
+          <input type="number" id="notifyThreshold" value="60" min="1" max="300">
+          <div class="help-text">距离重置还剩多少分钟时提醒</div>
+        </div>
+
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="enableNotifications" checked>
+            启用微信通知
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="enableAutoRefresh" checked>
+            启用智能刷新
+          </label>
+          <div class="help-text">每 30 分钟自动更新数据（后台打开 usage 页面）</div>
+        </div>
+
+        <div class="form-group">
+          <label for="firebaseUrl">Firebase Database URL（可选）</label>
+          <input type="text" id="firebaseUrl" placeholder="https://your-project.firebaseio.com">
+          <div class="help-text">用于手机 Web 页面查看</div>
+        </div>
+
+        <button id="saveConfigBtn" class="btn btn-primary">保存设置</button>
+      </div>
+    </div>
+
+    <!-- 底部信息 -->
+    <div class="footer">
+      <div class="last-update">最后更新: <span id="lastUpdate">--</span></div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

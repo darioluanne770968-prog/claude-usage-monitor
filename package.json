@@ -1,0 +1,21 @@
+{
+  "name": "claude-usage-monitor",
+  "version": "1.0.0",
+  "description": "实时监控 Claude 使用量，智能提醒最佳使用时机",
+  "author": "haihui",
+  "license": "MIT",
+  "keywords": [
+    "claude",
+    "usage",
+    "monitor",
+    "chrome-extension",
+    "notification"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/claude-usage-monitor.git"
+  },
+  "scripts": {
+    "serve": "cd web && python3 -m http.server 8080"
+  }
+}

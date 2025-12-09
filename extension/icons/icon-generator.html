@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>生成扩展图标</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    .container {
+      text-align: center;
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #667eea;
+      margin-bottom: 30px;
+    }
+    .icon-preview {
+      margin: 20px 0;
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+    }
+    canvas {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+    button {
+      margin-top: 20px;
+      padding: 12px 24px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    button:hover {
+      background: #5568d3;
+    }
+    .instructions {
+      margin-top: 30px;
+      text-align: left;
+      font-size: 14px;
+      color: #666;
+      max-width: 500px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Claude 用量监控 - 图标生成</h1>
+    <p>点击下面的按钮生成并下载扩展图标</p>
+
+    <div class="icon-preview">
+      <canvas id="icon16" width="16" height="16"></canvas>
+      <canvas id="icon48" width="48" height="48"></canvas>
+      <canvas id="icon128" width="128" height="128"></canvas>
+    </div>
+
+    <button id="downloadBtn">下载所有图标</button>
+
+    <div class="instructions">
+      <h3>使用说明：</h3>
+      <ol>
+        <li>点击"下载所有图标"按钮</li>
+        <li>将下载的 icon16.png、icon48.png、icon128.png 放到此目录</li>
+        <li>删除本 HTML 文件（可选）</li>
+        <li>重新加载浏览器扩展即可</li>
+      </ol>
+    </div>
+  </div>
+
+  <script>
+    // 绘制图标
+    function drawIcon(canvas, size) {
+      const ctx = canvas.getContext('2d');
+      const centerX = size / 2;
+      const centerY = size / 2;
+
+      // 背景渐变
+      const gradient = ctx.createLinearGradient(0, 0, size, size);
+      gradient.addColorStop(0, '#667eea');
+      gradient.addColorStop(1, '#764ba2');
+
+      // 绘制圆角矩形背景
+      const radius = size * 0.15;
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.roundRect(0, 0, size, size, radius);
+      ctx.fill();
+
+      // 绘制图表符号
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = size * 0.08;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      // 绘制柱状图
+      const barWidth = size * 0.12;
+      const spacing = size * 0.08;
+      const startX = size * 0.25;
+      const baseY = size * 0.75;
+
+      // 第一根柱子（短）
+      ctx.beginPath();
+      ctx.moveTo(startX, baseY);
+      ctx.lineTo(startX, baseY - size * 0.25);
+      ctx.stroke();
+
+      // 第二根柱子（中）
+      ctx.beginPath();
+      ctx.moveTo(startX + barWidth + spacing, baseY);
+      ctx.lineTo(startX + barWidth + spacing, baseY - size * 0.4);
+      ctx.stroke();
+
+      // 第三根柱子（高）
+      ctx.beginPath();
+      ctx.moveTo(startX + (barWidth + spacing) * 2, baseY);
+      ctx.lineTo(startX + (barWidth + spacing) * 2, baseY - size * 0.5);
+      ctx.stroke();
+    }
+
+    // 生成所有尺寸的图标
+    drawIcon(document.getElementById('icon16'), 16);
+    drawIcon(document.getElementById('icon48'), 48);
+    drawIcon(document.getElementById('icon128'), 128);
+
+    // 下载图标
+    document.getElementById('downloadBtn').addEventListener('click', () => {
+      ['icon16', 'icon48', 'icon128'].forEach(id => {
+        const canvas = document.getElementById(id);
+        const link = document.createElement('a');
+        link.download = `${id}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      });
+
+      alert('图标已下载！请将它们放到 icons 目录下');
+    });
+  </script>
+</body>
+</html>

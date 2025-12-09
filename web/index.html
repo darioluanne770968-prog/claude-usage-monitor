@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Claude 用量监控</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <!-- 头部 -->
+    <header class="header">
+      <h1>Claude 用量监控</h1>
+      <div class="status">
+        <span class="status-dot" id="statusDot"></span>
+        <span class="status-text" id="statusText">连接中...</span>
+      </div>
+    </header>
+
+    <!-- 主要内容 -->
+    <main class="main">
+      <!-- 配置提示 -->
+      <div class="config-prompt" id="configPrompt">
+        <div class="prompt-icon">⚙️</div>
+        <h2>首次使用配置</h2>
+        <p>请在浏览器扩展中配置 Firebase Database URL</p>
+        <div class="form-group">
+          <label for="firebaseUrlInput">Firebase Database URL</label>
+          <input type="url" id="firebaseUrlInput" placeholder="https://your-project.firebasedatabase.app" size="100" autocomplete="off" spellcheck="false">
+          <div class="help-text" style="margin-top: -12px; margin-bottom: 16px; font-size: 11px; color: #888;">
+            提示：请确保输入完整的 URL，包括 https:// 开头和 .app 结尾
+          </div>
+          <button id="saveUrlBtn" class="btn btn-primary">保存并开始</button>
+        </div>
+      </div>
+
+      <!-- 用量显示 -->
+      <div class="usage-display" id="usageDisplay" style="display: none;">
+        <!-- 提醒卡片 -->
+        <div class="alert-card" id="alertCard" style="display: none;">
+          <div class="alert-icon">⏰</div>
+          <div class="alert-content">
+            <h3>最佳使用时机！</h3>
+            <p id="alertMessage"></p>
+          </div>
+        </div>
+
+        <!-- 用量卡片 -->
+        <div class="usage-cards">
+          <div class="usage-card">
+            <div class="card-header">
+              <span class="card-title">当前会话</span>
+              <span class="card-value" id="currentSessionValue">--%</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" id="currentSessionBar"></div>
+            </div>
+          </div>
+
+          <div class="usage-card">
+            <div class="card-header">
+              <span class="card-title">每周限制</span>
+              <span class="card-value" id="weeklyValue">--%</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" id="weeklyBar"></div>
+            </div>
+            <div class="card-footer">
+              <span class="reset-label">重置时间</span>
+              <span class="reset-time" id="weeklyReset">--</span>
+            </div>
+          </div>
+
+          <div class="usage-card">
+            <div class="card-header">
+              <span class="card-title">5小时限制</span>
+              <span class="card-value" id="fiveHourValue">--%</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" id="fiveHourBar"></div>
+            </div>
+            <div class="card-footer">
+              <span class="reset-label">重置时间</span>
+              <span class="reset-time" id="fiveHourReset">--</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 历史图表（可选） -->
+        <div class="history-section">
+          <h3>使用趋势</h3>
+          <div class="chart-placeholder">
+            <p>数据收集中...</p>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- 底部 -->
+    <footer class="footer">
+      <div class="last-sync">
+        最后同步: <span id="lastSync">--</span>
+      </div>
+      <div class="auto-refresh">
+        <label>
+          <input type="checkbox" id="autoRefresh" checked>
+          自动刷新（30秒）
+        </label>
+      </div>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
