@@ -115,6 +115,35 @@ function parseFixedResetTime(timeStr) {
   }
 }
 
+// 尝试从页面获取账号邮箱
+function detectAccountEmail() {
+  try {
+    // 方法1: 从页面文本中查找邮箱
+    const allText = document.body.innerText;
+    const emailMatch = allText.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/);
+    if (emailMatch) {
+      console.log('检测到账号邮箱:', emailMatch[1]);
+      return emailMatch[1];
+    }
+
+    // 方法2: 查找特定元素（可能包含邮箱）
+    const emailElements = document.querySelectorAll('[type="email"], [data-testid*="email"]');
+    for (const el of emailElements) {
+      const email = el.value || el.textContent;
+      if (email && email.includes('@')) {
+        console.log('从元素检测到账号邮箱:', email);
+        return email.trim();
+      }
+    }
+
+    console.log('未检测到账号邮箱，使用默认标识');
+    return 'account_default';
+  } catch (error) {
+    console.error('检测账号邮箱失败:', error);
+    return 'account_default';
+  }
+}
+
 // 读取用量数据
 async function readUsageData() {
   try {
@@ -123,8 +152,13 @@ async function readUsageData() {
     // 等待页面基本内容加载（等待包含 "Plan usage limits" 的文本）
     await new Promise(resolve => setTimeout(resolve, 2000));
 
+    // 检测当前账号
+    const accountId = detectAccountEmail();
+    console.log('当前账号:', accountId);
+
     const now = Date.now();
     const usageData = {
+      accountId: accountId,  // 添加账号标识
       timestamp: now,
       lastSync: now,  // 添加上次同步时间
       currentSession: {

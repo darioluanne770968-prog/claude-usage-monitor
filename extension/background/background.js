@@ -74,14 +74,27 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 async function handleUsageDataUpdate(data) {
   console.log('处理用量数据更新:', data);
 
+  const accountId = data.accountId || 'account_default';
+
+  // 获取所有账号数据
+  const result = await chrome.storage.local.get(['accounts', 'currentAccount']);
+  const accounts = result.accounts || {};
+
+  // 更新当前账号的数据
+  accounts[accountId] = data;
+
   // 保存到本地存储
   await chrome.storage.local.set({
-    latestUsage: data,
+    accounts: accounts,
+    currentAccount: accountId,
+    latestUsage: data,  // 保持兼容性
     lastUpdateTime: Date.now()
   });
 
-  // 同步到 Firebase
-  syncToFirebase(data);
+  console.log('已保存账号数据:', accountId);
+
+  // 同步到 Firebase（按账号存储）
+  syncToFirebase(data, accountId);
 
   // 检查是否需要发送通知
   checkAndNotify(data);
@@ -240,8 +253,8 @@ async function sendWeChatNotification(title, content) {
   }
 }
 
-// 同步到 Firebase
-async function syncToFirebase(data) {
+// 同步到 Firebase（支持多账号）
+async function syncToFirebase(data, accountId) {
   const config = await getConfig();
 
   if (!config.firebaseConfig || !config.firebaseConfig.databaseURL) {
@@ -250,7 +263,9 @@ async function syncToFirebase(data) {
   }
 
   try {
-    const url = `${config.firebaseConfig.databaseURL}/usage.json`;
+    // 为每个账号单独存储：/accounts/{accountId}/usage.json
+    const safeAccountId = accountId.replace(/[@.]/g, '_'); // 替换特殊字符
+    const url = `${config.firebaseConfig.databaseURL}/accounts/${safeAccountId}.json`;
 
     const response = await fetch(url, {
       method: 'PUT',
@@ -259,14 +274,15 @@ async function syncToFirebase(data) {
       },
       body: JSON.stringify({
         ...data,
-        syncTime: Date.now()
+        syncTime: Date.now(),
+        accountId: accountId  // 保存原始账号ID
       })
     });
 
     const result = await response.json();
-    console.log('Firebase 同步成功:', result);
+    console.log(`Firebase 同步成功 [${accountId}]:`, result);
   } catch (error) {
-    console.error('Firebase 同步失败:', error);
+    console.error(`Firebase 同步失败 [${accountId}]:`, error);
   }
 }
 

@@ -13,6 +13,8 @@ const elements = {
   usageDisplay: document.getElementById('usageDisplay'),
   firebaseUrlInput: document.getElementById('firebaseUrlInput'),
   saveUrlBtn: document.getElementById('saveUrlBtn'),
+  accountSelector: document.getElementById('accountSelector'),
+  accountSelect: document.getElementById('accountSelect'),
   statusDot: document.getElementById('statusDot'),
   statusText: document.getElementById('statusText'),
   alertCard: document.getElementById('alertCard'),
@@ -28,6 +30,10 @@ const elements = {
   lastSync: document.getElementById('lastSync'),
   autoRefresh: document.getElementById('autoRefresh')
 };
+
+// 当前选中的账号
+let selectedAccountId = null;
+let allAccounts = {};
 
 // 初始化
 document.addEventListener('DOMContentLoaded', () => {
@@ -103,23 +109,42 @@ function startFetching() {
   startAutoRefresh();
 }
 
-// 从 Firebase 获取数据
+// 从 Firebase 获取所有账号数据
 async function fetchUsageData() {
   try {
     updateStatus('loading', '获取数据中...');
 
-    const response = await fetch(`${firebaseUrl}/usage.json`);
+    // 获取所有账号
+    const response = await fetch(`${firebaseUrl}/accounts.json`);
 
     if (!response.ok) {
       throw new Error('获取数据失败');
     }
 
-    const data = await response.json();
+    const accounts = await response.json();
 
-    if (data && data.timestamp) {
-      displayUsageData(data);
+    if (accounts && Object.keys(accounts).length > 0) {
+      allAccounts = accounts;
+      console.log('获取到账号:', Object.keys(accounts));
+
+      // 如果有多个账号，显示账号选择器
+      if (Object.keys(accounts).length > 1) {
+        elements.accountSelector.style.display = 'flex';
+        populateAccountSelector(accounts);
+      } else {
+        elements.accountSelector.style.display = 'none';
+      }
+
+      // 显示第一个账号的数据（或之前选择的账号）
+      if (selectedAccountId && accounts[selectedAccountId]) {
+        displayUsageData(accounts[selectedAccountId]);
+      } else {
+        const firstAccountId = Object.keys(accounts)[0];
+        selectedAccountId = firstAccountId;
+        displayUsageData(accounts[firstAccountId]);
+      }
+
       updateStatus('connected', '已连接');
-      updateLastSync(data.syncTime || data.timestamp);
     } else {
       updateStatus('error', '暂无数据');
       console.log('Firebase 中暂无数据，请先在电脑上访问 claude.ai/settings/usage');
@@ -127,6 +152,38 @@ async function fetchUsageData() {
   } catch (error) {
     console.error('获取数据失败:', error);
     updateStatus('error', '连接失败');
+  }
+}
+
+// 填充账号选择器
+function populateAccountSelector(accounts) {
+  elements.accountSelect.innerHTML = '';
+
+  Object.keys(accounts).forEach(accountId => {
+    const account = accounts[accountId];
+    const displayName = account.accountId || accountId;
+
+    const option = document.createElement('option');
+    option.value = accountId;
+    option.textContent = displayName;
+    if (accountId === selectedAccountId) {
+      option.selected = true;
+    }
+    elements.accountSelect.appendChild(option);
+  });
+
+  // 监听账号切换
+  elements.accountSelect.removeEventListener('change', handleAccountChange);
+  elements.accountSelect.addEventListener('change', handleAccountChange);
+}
+
+// 处理账号切换
+function handleAccountChange(e) {
+  const accountId = e.target.value;
+  selectedAccountId = accountId;
+
+  if (allAccounts[accountId]) {
+    displayUsageData(allAccounts[accountId]);
   }
 }
 

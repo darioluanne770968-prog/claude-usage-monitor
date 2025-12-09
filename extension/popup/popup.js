@@ -4,6 +4,8 @@ console.log('Popup 已加载');
 
 // DOM 元素
 const elements = {
+  accountSelector: document.getElementById('accountSelector'),
+  accountSelect: document.getElementById('accountSelect'),
   currentSession: document.getElementById('currentSession'),
   currentSessionBar: document.getElementById('currentSessionBar'),
   weeklyLimits: document.getElementById('weeklyLimits'),
@@ -28,6 +30,9 @@ const elements = {
   saveConfigBtn: document.getElementById('saveConfigBtn')
 };
 
+// 当前选中的账号
+let selectedAccountId = null;
+
 // 初始化
 document.addEventListener('DOMContentLoaded', () => {
   loadUsageData();
@@ -37,9 +42,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 加载用量数据
 function loadUsageData() {
-  chrome.runtime.sendMessage({ type: 'GET_USAGE_DATA' }, (response) => {
-    if (response && response.success && response.data) {
-      displayUsageData(response.data);
+  // 加载所有账号
+  chrome.storage.local.get(['accounts', 'currentAccount'], (result) => {
+    const accounts = result.accounts || {};
+    const currentAccount = result.currentAccount;
+
+    console.log('加载账号数据:', Object.keys(accounts));
+
+    // 如果有多个账号，显示账号选择器
+    if (Object.keys(accounts).length > 1) {
+      elements.accountSelector.style.display = 'flex';
+      populateAccountSelector(accounts, currentAccount);
+    } else if (Object.keys(accounts).length === 1) {
+      // 只有一个账号，隐藏选择器，直接显示
+      elements.accountSelector.style.display = 'none';
+      const accountId = Object.keys(accounts)[0];
+      selectedAccountId = accountId;
+      displayUsageData(accounts[accountId]);
+    }
+
+    // 如果有当前账号，显示其数据
+    if (currentAccount && accounts[currentAccount]) {
+      selectedAccountId = currentAccount;
+      displayUsageData(accounts[currentAccount]);
+    } else if (Object.keys(accounts).length > 0) {
+      // 显示第一个账号
+      const firstAccount = Object.keys(accounts)[0];
+      selectedAccountId = firstAccount;
+      displayUsageData(accounts[firstAccount]);
     } else {
       console.log('暂无用量数据，请访问 Usage 页面');
     }
@@ -50,6 +80,35 @@ function loadUsageData() {
     if (result.lastUpdateTime) {
       updateLastUpdateTime(result.lastUpdateTime);
     }
+  });
+}
+
+// 填充账号选择器
+function populateAccountSelector(accounts, currentAccount) {
+  elements.accountSelect.innerHTML = '';
+
+  Object.keys(accounts).forEach(accountId => {
+    const option = document.createElement('option');
+    option.value = accountId;
+    option.textContent = accountId;
+    if (accountId === currentAccount) {
+      option.selected = true;
+    }
+    elements.accountSelect.appendChild(option);
+  });
+
+  // 监听账号切换
+  elements.accountSelect.addEventListener('change', (e) => {
+    const accountId = e.target.value;
+    selectedAccountId = accountId;
+
+    // 加载选中账号的数据
+    chrome.storage.local.get(['accounts'], (result) => {
+      const accounts = result.accounts || {};
+      if (accounts[accountId]) {
+        displayUsageData(accounts[accountId]);
+      }
+    });
   });
 }
 
