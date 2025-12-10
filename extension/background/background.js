@@ -331,6 +331,24 @@ async function updateConfig(newConfig) {
   const updatedConfig = { ...currentConfig, ...newConfig };
   await chrome.storage.local.set({ config: updatedConfig });
   console.log('配置已更新:', updatedConfig);
+
+  // 如果自动刷新设置改变，重新创建定时器
+  if ('enableAutoRefresh' in newConfig || 'autoRefreshInterval' in newConfig) {
+    const interval = updatedConfig.autoRefreshInterval || AUTO_REFRESH_INTERVAL;
+
+    // 清除旧的定时器
+    await chrome.alarms.clear('autoRefresh');
+
+    // 如果启用自动刷新，创建新的定时器
+    if (updatedConfig.enableAutoRefresh !== false) {
+      chrome.alarms.create('autoRefresh', {
+        periodInMinutes: interval
+      });
+      console.log(`自动刷新定时器已更新：每 ${interval} 分钟`);
+    } else {
+      console.log('自动刷新已禁用');
+    }
+  }
 }
 
 // 智能刷新数据

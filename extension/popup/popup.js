@@ -27,6 +27,7 @@ const elements = {
   notifyThreshold: document.getElementById('notifyThreshold'),
   enableNotifications: document.getElementById('enableNotifications'),
   enableAutoRefresh: document.getElementById('enableAutoRefresh'),
+  autoRefreshInterval: document.getElementById('autoRefreshInterval'),
   firebaseUrl: document.getElementById('firebaseUrl'),
   saveConfigBtn: document.getElementById('saveConfigBtn')
 };
@@ -260,6 +261,7 @@ function loadConfig() {
       elements.notifyThreshold.value = config.notifyThreshold || 60;
       elements.enableNotifications.checked = config.enableNotifications !== false;
       elements.enableAutoRefresh.checked = config.enableAutoRefresh !== false;
+      elements.autoRefreshInterval.value = config.autoRefreshInterval || 30;
       elements.firebaseUrl.value = config.firebaseConfig?.databaseURL || '';
     }
   });
@@ -319,6 +321,7 @@ function setupEventListeners() {
       notifyThreshold: parseInt(elements.notifyThreshold.value) || 60,
       enableNotifications: elements.enableNotifications.checked,
       enableAutoRefresh: elements.enableAutoRefresh.checked,
+      autoRefreshInterval: parseInt(elements.autoRefreshInterval.value) || 30,
       firebaseConfig: elements.firebaseUrl.value.trim() ? {
         databaseURL: elements.firebaseUrl.value.trim()
       } : null
