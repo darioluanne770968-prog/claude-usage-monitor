@@ -234,8 +234,9 @@ body {
 }
 
 .settings-content.show {
-  max-height: 500px;
+  max-height: 800px;
   padding: 0 20px 16px;
+  overflow-y: auto;
 }
 
 .form-group {
